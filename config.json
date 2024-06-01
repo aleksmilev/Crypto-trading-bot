@@ -1,0 +1,24 @@
+{
+    "account_settings":{
+		"operation_delay": 10000	
+	},
+    "trading_settings": [
+		{
+			"symbol": "BTCUSDT",
+			"max_quantity": 0.01,
+			"operation_delay": 5000,
+			"max_log_length": 5,
+			"max_risk": 0.05,
+			"avg_risk": 0.03
+		},
+		{
+			"symbol": "ETHUSDT",
+			"max_quantity": 0.1,
+			"operation_delay": 5000,
+			"max_log_length": 100,
+			"max_risk": 0.05,
+			"avg_risk": 0.03
+		}
+    ]
+  }
+  
