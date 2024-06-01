@@ -1,6 +1,10 @@
 const axios = require('axios');
 const fs = require('fs').promises;
 const path = require('path');
+const zlib = require('zlib');
+const util = require('util');
+const gzip = util.promisify(zlib.gzip);
+const gunzip = util.promisify(zlib.gunzip);
 const crypto = require('crypto');
 require('dotenv').config();
 
@@ -25,25 +29,26 @@ class AccountData {
                 }
             });
             return response.data;
-        }  catch (error) {
+        } catch (error) {
             console.error('Error fetching account data:', error);
             return error;
         }
     }
 
     static async saveAccountData(data) {
-        const filePath = path.join(__dirname, '../../logs/account', 'account_data.json');
+        const filePath = path.join(__dirname, '../../logs/account', 'account_data.json.gz');
         try {
             await fs.access(filePath).catch(async (error) => {
                 if (error.code === 'ENOENT') {
-                    await fs.writeFile(filePath, '[]');
+                    await fs.writeFile(filePath, await gzip(JSON.stringify([])));
                     console.log('Account data file created successfully');
                 } else {
                     throw error;
                 }
             });
 
-            await fs.writeFile(filePath, JSON.stringify(data, null, 2));
+            const compressedData = await gzip(JSON.stringify(data, null, 2));
+            await fs.writeFile(filePath, compressedData);
             console.log('Account data saved successfully');
         } catch (error) {
             console.error('Error saving account data:', error);
