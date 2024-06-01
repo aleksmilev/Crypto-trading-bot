@@ -1,3 +1,13 @@
 version: '3.8'
 
 services:
+  data-collection:
+    build:
+      context: ./data-collection
+      dockerfile: Dockerfile
+    volumes:
+      - ./logs:/usr/src/logs/
+      - ./config.json:/usr/src/app/config.json
+    env_file:
+      - .env
+    restart: always

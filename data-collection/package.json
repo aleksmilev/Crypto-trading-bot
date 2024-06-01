@@ -1,0 +1,15 @@
+{
+  "name": "crypto-data-collection",
+  "version": "1.0.0",
+  "description": "A service for collecting crypto data from Binance API.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "axios": "^1.7.2",
+    "dotenv": "^16.4.5"
+  },
+  "author": "",
+  "license": "ISC"
+}
