@@ -1,6 +1,5 @@
 .env
 /*.txt
 
-logs/account/*
-logs/crypto/*
-
+logs/account/*.json
+logs/crypto/*.json.gz
