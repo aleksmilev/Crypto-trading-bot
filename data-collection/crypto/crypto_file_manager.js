@@ -62,7 +62,7 @@ class FileManager extends EventEmitter {
             if (!this.fullLogs) {
                 this.fullLogs = true;
                 this.emit('logsReady', this.symbol);
-                await fs.writeFile(path.join(__dirname, '../../logs', 'event_marker.json'), `logsReady:${this.symbol}`);
+                // await fs.writeFile(path.join(__dirname, '../../logs', 'event_marker.json'), `logsReady:${this.symbol}`);
                 console.log("Finished collecting start data for: " + this.symbol);
             }
         }
