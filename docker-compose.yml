@@ -11,3 +11,16 @@ services:
     env_file:
       - .env
     restart: always
+
+  decision-making:
+      build:
+        context: ./decision-making
+        dockerfile: Dockerfile
+      volumes:
+        - ./logs:/usr/src/app/logs
+        - ./config.json:/usr/src/app/config.json
+      env_file:
+        - .env
+      restart: always
+      depends_on:
+        - data-collection

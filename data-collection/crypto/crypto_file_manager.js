@@ -33,18 +33,10 @@ class FileManager extends EventEmitter {
         try {
             const data = await fs.readFile(this.filePath);
             const decompressedData = await gunzip(data);
-            const logContent = JSON.parse(decompressedData.toString());
-
-            if (logContent.length > 0) {
-                await this.createLogFile();
-                console.log(`Log file for ${this.symbol} was not empty and has been cleared.`);
-            } else {
-                this.log = logContent;
-            }
+            this.log = JSON.parse(decompressedData.toString());
         } catch (error) {
             if (error.code === 'ENOENT') {
                 await this.createLogFile();
-                console.log(`Log file for ${this.symbol} did not exist and has been created.`);
             } else {
                 console.error(`Error reading log file ${this.filePath}:`, error);
             }
@@ -70,6 +62,7 @@ class FileManager extends EventEmitter {
             if (!this.fullLogs) {
                 this.fullLogs = true;
                 this.emit('logsReady', this.symbol);
+                await fs.writeFile(path.join(__dirname, '../../logs', 'event_marker.json'), `logsReady:${this.symbol}`);
                 console.log("Finished collecting start data for: " + this.symbol);
             }
         }
