@@ -7,10 +7,8 @@ const EventEmitter = require('events');
 const gzip = util.promisify(zlib.gzip);
 const gunzip = util.promisify(zlib.gunzip);
 
-class FileManager extends EventEmitter {
-    constructor(symbol, maxLogLength) {
-        super();
-        
+class FileManager {
+    constructor(symbol, maxLogLength) {        
         this.filePath = path.join(__dirname, '../../logs/crypto', `${symbol}_data.json.gz`);
         this.maxLogLength = maxLogLength;
         this.symbol = symbol;
@@ -61,8 +59,10 @@ class FileManager extends EventEmitter {
 
             if (!this.fullLogs) {
                 this.fullLogs = true;
-                this.emit('logsReady', this.symbol);
-                // await fs.writeFile(path.join(__dirname, '../../logs', 'event_marker.json'), `logsReady:${this.symbol}`);
+                
+                // this.emit('logsReady', this.symbol);
+                // Event
+
                 console.log("Finished collecting start data for: " + this.symbol);
             }
         }
