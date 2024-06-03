@@ -2,16 +2,16 @@ const fs = require('fs').promises;
 const path = require('path');
 const zlib = require('zlib');
 const util = require('util');
-const EventEmitter = require('events');
 
 const gzip = util.promisify(zlib.gzip);
 const gunzip = util.promisify(zlib.gunzip);
 
 class FileManager {
-    constructor(symbol, maxLogLength) {        
+    constructor(symbol, maxLogLength, eventMarket) {        
         this.filePath = path.join(__dirname, '../../logs/crypto', `${symbol}_data.json.gz`);
         this.maxLogLength = maxLogLength;
         this.symbol = symbol;
+        this.eventMarket = eventMarket;
         this.ensureDirectoryExistence();
 
         this.fullLogs = false;
@@ -62,6 +62,7 @@ class FileManager {
                 
                 // this.emit('logsReady', this.symbol);
                 // Event
+                this.eventMarket.emitEvent('logsReady', this.symbol);
 
                 console.log("Finished collecting start data for: " + this.symbol);
             }

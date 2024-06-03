@@ -3,18 +3,32 @@ const EventHandler = require('./event_handler');
 const fs = require('fs').promises;
 const path = require('path');
 
-class EventMarker {
+class EventMarket {
     eventList = [];
 
     constructor() {
         this.filePath = path.join(__dirname, '../../logs', 'event_marker.json');
 
         (async () => {
+            await this.initializeFile();
+
             while (true) {
                 await this.checkForUpdates();
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
         })();
+    }
+
+    async initializeFile() {
+        try {
+            await fs.access(this.filePath);
+        } catch (error) {
+            if (error.code === 'ENOENT') {
+                await this.writeEventsToFile([]);
+            } else {
+                console.error('Error checking file existence:', error);
+            }
+        }
     }
 
     addEventListener(name, callback) {
@@ -87,4 +101,4 @@ class EventMarker {
     }
 }
 
-module.exports = EventMarker;
+module.exports = EventMarket;

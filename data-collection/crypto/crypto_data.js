@@ -2,10 +2,10 @@ const axios = require('axios');
 const FileManager = require('./crypto_file_manager');
 
 class CryptoData {
-    constructor(symbol, maxLogLength, operationDelay) {
+    constructor(symbol, maxLogLength, operationDelay, eventMarket) {
         this.symbol = symbol;
         this.operationDelay = operationDelay;
-        this.fileManager = new FileManager(symbol, maxLogLength);
+        this.fileManager = new FileManager(symbol, maxLogLength, eventMarket);
 
         this.startFetching();
     }
