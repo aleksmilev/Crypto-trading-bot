@@ -7,7 +7,7 @@ class EventMarket {
     eventList = [];
 
     constructor() {
-        this.filePath = path.join(__dirname, '../../logs', 'event_marker.json');
+        this.filePath = path.join(__dirname, '../../logs', 'event_market.json');
 
         (async () => {
             await this.initializeFile();
