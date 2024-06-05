@@ -25,6 +25,9 @@ require('dotenv').config();
             eventMarket.emitEvent('fetchAccountData', 'all');
         }, 1000);
 
+        eventMarket.addEventListener('print', (data) => {
+            console.log(`New pring event form decision-making: ${data}`);
+        });
     } catch (error) {
         console.error('Error initializing the application:', error);
     }
