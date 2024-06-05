@@ -58,12 +58,8 @@ class FileManager {
             this.log.shift();
 
             if (!this.fullLogs) {
-                this.fullLogs = true;
-                
-                // this.emit('logsReady', this.symbol);
-                // Event
+                this.fullLogs = true;                
                 this.eventMarket.emitEvent('logsReady', this.symbol);
-
                 console.log("Finished collecting start data for: " + this.symbol);
             }
         }
