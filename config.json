@@ -1,7 +1,4 @@
 {
-    "account_settings":{
-		"operation_delay": 10000	
-	},
     "trading_settings": [
 		{
 			"symbol": "BTCUSDT",
@@ -19,6 +16,48 @@
 			"max_risk": 0.05,
 			"avg_risk": 0.03
 		}
-    ]
-  }
-  
+    ],
+	"strategies": [
+		{
+			"name": "Simple Moving Average (SMA) Crossover",
+			"success_rate": 0.75,
+			"parameters": {
+				"short_window": 50,
+				"long_window": 200
+			}
+		},
+		{
+			"name": "Exponential Moving Average (EMA) Crossover",
+			"success_rate": 0.8,
+			"parameters": {
+				"short_window": 20,
+				"long_window": 50
+			}
+		},
+		{
+			"name": "Relative Strength Index (RSI) Strategy",
+			"success_rate": 0.65,
+			"parameters": {
+				"overbought_threshold": 70,
+				"oversold_threshold": 30
+			}
+		},
+		{
+			"name": "Bollinger Bands Strategy",
+			"success_rate": 0.7,
+			"parameters": {
+				"window": 20,
+				"deviation": 2
+			}
+		},
+		{
+			"name": "MACD Strategy",
+			"success_rate": 0.85,
+			"parameters": {
+				"short_window": 12,
+				"long_window": 26,
+				"signal_window": 9
+			}
+		}
+	]
+} 
