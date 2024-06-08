@@ -1,5 +1,8 @@
 {
-    "trading_settings": [
+    "account_settings": {
+		"test":true
+	},
+	"trading_settings": [
 		{
 			"symbol": "BTCUSDT",
 			"max_quantity": 0.01,
