@@ -1,4 +1,1 @@
 uuid
-torch
-transformers
-pandas

@@ -1,1 +1,102 @@
-[]
+[
+  {
+    "id": "60975df6-69b1-4a45-9199-07bbea2d4434",
+    "name": "logsReady",
+    "data": "ETHUSDT"
+  },
+  {
+    "id": "19c8d43d-bfe1-471c-9f67-b14c4cde7626",
+    "name": "logsReady",
+    "data": "BTCUSDT"
+  },
+  {
+    "id": "79f0ee31-c26d-4b68-a8cf-97b9c7193ae4",
+    "name": "logsReady",
+    "data": "ETHUSDT"
+  },
+  {
+    "id": "17bdfa47-4ab5-4a08-bacf-6c1a9a153429",
+    "name": "logsReady",
+    "data": "ETHUSDT"
+  },
+  {
+    "id": "174213c0-94d8-4a20-9d56-b805ab51cf06",
+    "name": "logsReady",
+    "data": "BTCUSDT"
+  },
+  {
+    "id": "02f4f20a-15d0-4c33-b48a-3af43225b058",
+    "name": "logsReady",
+    "data": "BTCUSDT"
+  },
+  {
+    "id": "2025821e-59a0-4662-a904-6f0cb6d69f8b",
+    "name": "logsReady",
+    "data": "ETHUSDT"
+  },
+  {
+    "id": "e72bc122-4cd0-4b76-90b1-dd5cfd154567",
+    "name": "logsReady",
+    "data": "ETHUSDT"
+  },
+  {
+    "id": "726748ab-4619-4fbf-a190-913eb182f5e8",
+    "name": "logsReady",
+    "data": "BTCUSDT"
+  },
+  {
+    "id": "c5394f80-b858-4b4a-a804-021c35d48d35",
+    "name": "logsReady",
+    "data": "ETHUSDT"
+  },
+  {
+    "id": "693cc23c-734b-4815-9bc9-0c65707bd35b",
+    "name": "logsReady",
+    "data": "BTCUSDT"
+  },
+  {
+    "id": "8d891b2a-12e1-4fbd-bc33-b79cd3990703",
+    "name": "logsReady",
+    "data": "ETHUSDT"
+  },
+  {
+    "id": "b67e9b61-2490-43d2-b92e-299d4a4559ce",
+    "name": "logsReady",
+    "data": "BTCUSDT"
+  },
+  {
+    "id": "4411a8db-2e9f-41a9-a070-cfac50ded2a2",
+    "name": "logsReady",
+    "data": "ETHUSDT"
+  },
+  {
+    "id": "fcc94f19-6edc-4748-b3e1-fbffb55d1193",
+    "name": "logsReady",
+    "data": "BTCUSDT"
+  },
+  {
+    "id": "0d379a1c-662c-4b77-8ac1-3d97425d9a8e",
+    "name": "logsReady",
+    "data": "BTCUSDT"
+  },
+  {
+    "id": "d43d3e59-ec30-4af0-979b-f5656aa47738",
+    "name": "logsReady",
+    "data": "ETHUSDT"
+  },
+  {
+    "id": "c60da662-2301-47ad-b9f3-76c9a14dcadf",
+    "name": "logsReady",
+    "data": "BTCUSDT"
+  },
+  {
+    "id": "852c8077-586a-4e8c-ac13-2bf450fce7e2",
+    "name": "print",
+    "data": "Decision-making is ready!"
+  },
+  {
+    "id": "e962b503-6979-4428-8e13-329d81754e26",
+    "name": "logsReady",
+    "data": "ETHUSDT"
+  }
+]

@@ -1,12 +1,10 @@
 const axios = require('axios');
 const fs = require('fs').promises;
 const path = require('path');
-const zlib = require('zlib');
-const util = require('util');
-const gzip = util.promisify(zlib.gzip);
-const gunzip = util.promisify(zlib.gunzip);
 const crypto = require('crypto');
 require('dotenv').config();
+
+const configFilePath = path.join(__dirname, '../config.json');
 
 class AccountData {
     static async fetchAccountData() {
@@ -31,27 +29,44 @@ class AccountData {
             return response.data;
         } catch (error) {
             console.error('Error fetching account data:', error);
-            return error;
+            return null;
+        }
+    }
+
+    static async filterBalances(accountData) {
+        try {
+            const configData = JSON.parse(await fs.readFile(configFilePath, 'utf-8'));
+            const tradingSymbols = configData.trading_settings.map(setting => setting.symbol.replace('USDT', ''));
+
+            const filteredBalances = accountData.balances.filter(balance => 
+                tradingSymbols.includes(balance.asset)
+            );
+
+            return {
+                ...accountData,
+                balances: filteredBalances
+            };
+        } catch (error) {
+            console.error('Error filtering balances:', error);
+            return accountData;
         }
     }
 
     static async saveAccountData(data) {
-        const filePath = path.join(__dirname, '../../logs/account', 'account_data.json.gz');
+        const filePath = path.join(__dirname, '../../logs/account', 'account_data.json');
         try {
-            await fs.access(filePath).catch(async (error) => {
-                if (error.code === 'ENOENT') {
-                    await fs.writeFile(filePath, await gzip(JSON.stringify([])));
-                    console.log('Account data file created successfully');
-                } else {
-                    throw error;
-                }
-            });
-
-            const compressedData = await gzip(JSON.stringify(data, null, 2));
-            await fs.writeFile(filePath, compressedData);
+            await fs.writeFile(filePath, JSON.stringify(data, null, 2));
             console.log('Account data saved successfully');
         } catch (error) {
             console.error('Error saving account data:', error);
+        }
+    }
+
+    static async updateAccountData() {
+        const accountData = await this.fetchAccountData();
+        if (accountData) {
+            const filteredAccountData = await this.filterBalances(accountData);
+            await this.saveAccountData(filteredAccountData);
         }
     }
 }
