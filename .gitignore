@@ -1,5 +1,8 @@
 .env
 
+data-collection/dist
+data-collection/node_modules
+
 logs/account/*.json.gz
 logs/crypto/*.json.gz
 
