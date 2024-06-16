@@ -90,13 +90,58 @@
     "data": "BTCUSDT"
   },
   {
-    "id": "852c8077-586a-4e8c-ac13-2bf450fce7e2",
+    "id": "e962b503-6979-4428-8e13-329d81754e26",
+    "name": "logsReady",
+    "data": "ETHUSDT"
+  },
+  {
+    "id": "7078ec09-d8cd-45a2-83c6-4203e5b73c9a",
     "name": "print",
     "data": "Decision-making is ready!"
   },
   {
-    "id": "e962b503-6979-4428-8e13-329d81754e26",
+    "id": "72cb034a-90b7-4c07-a6d2-138ef0c5a67f",
+    "name": "print",
+    "data": "Decision-making is ready!"
+  },
+  {
+    "id": "7b4b5ee9-e0f3-475d-80b6-33ec7ff2b0ff",
+    "name": "print",
+    "data": "Decision-making is ready!"
+  },
+  {
+    "id": "44bd1c8c-be58-47f5-9ee1-5e67d6fba702",
+    "name": "print",
+    "data": "Decision-making is ready!"
+  },
+  {
+    "id": "bf81abb4-7bc1-4341-9603-7c8f4a88261f",
+    "name": "print",
+    "data": "Decision-making is ready!"
+  },
+  {
+    "id": "1fb205db-ecff-40a4-bd30-fc8b25910818",
+    "name": "print",
+    "data": "Decision-making is ready!"
+  },
+  {
+    "id": "abc8aa9d-29b5-440e-8de2-e7b48910f59b",
+    "name": "print",
+    "data": "Decision-making is ready!"
+  },
+  {
+    "id": "661f367c-3309-41f5-94d2-08d8aeec4085",
+    "name": "print",
+    "data": "Decision-making is ready!"
+  },
+  {
+    "id": "445c5a6a-6590-4b75-9732-7b93fef93a53",
     "name": "logsReady",
     "data": "ETHUSDT"
+  },
+  {
+    "id": "8551b435-9289-45c2-b4d4-dad51d05a565",
+    "name": "logsReady",
+    "data": "BTCUSDT"
   }
 ]

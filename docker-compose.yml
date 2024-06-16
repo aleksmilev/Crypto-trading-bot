@@ -6,8 +6,8 @@ services:
       context: ./data-collection
       dockerfile: Dockerfile
     volumes:
-      - ./logs:/usr/src/logs/
-      - ./config.json:/usr/src/app/config.json
+      - ./logs:/usr/src/app/logs
+      - ./config.json:/usr/src/app/dist/config.json
     env_file:
       - .env
     restart: always

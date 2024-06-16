@@ -1,10 +1,11 @@
-const Event = require('./event');
-const EventHandler = require('./event_handler');
-const fs = require('fs').promises;
-const path = require('path');
+import Event from './event';
+import EventHandler from './event_handler';
+import { promises as fs } from 'fs';
+import path from 'path';
 
 class EventMarket {
-    eventList = [];
+    eventList: EventHandler[] = [];
+    filePath: string;
 
     constructor() {
         this.filePath = path.join(__dirname, '../../logs', 'event_market.json');
@@ -19,10 +20,10 @@ class EventMarket {
         })();
     }
 
-    async initializeFile() {
+    async initializeFile(): Promise<void> {
         try {
             await fs.access(this.filePath);
-        } catch (error) {
+        } catch (error : any) {
             if (error.code === 'ENOENT') {
                 await this.writeEventsToFile([]);
             } else {
@@ -31,11 +32,11 @@ class EventMarket {
         }
     }
 
-    addEventListener(name, callback) {
+    addEventListener(name: string, callback: Function): void {
         this.eventList.push(new EventHandler(name, callback));
     }
 
-    async executeEvent(name, data) {
+    async executeEvent(name: string, data: any): Promise<void> {
         const eventHandler = this.eventList.find(event => event.name === name);
         if (eventHandler) {
             eventHandler.callback(data);
@@ -43,7 +44,7 @@ class EventMarket {
         }
     }
 
-    async checkForUpdates() {
+    async checkForUpdates(): Promise<void> {
         try {
             const events = await this.readEventsFromFile();
             for (const event of events) {
@@ -57,16 +58,16 @@ class EventMarket {
         }
     }
 
-    async readEventsFromFile() {
+    async readEventsFromFile(): Promise<Event[]> {
         const data = await fs.readFile(this.filePath, 'utf8');
         return JSON.parse(data || '[]');
     }
 
-    async writeEventsToFile(events) {
+    async writeEventsToFile(events: Event[]): Promise<void> {
         await fs.writeFile(this.filePath, JSON.stringify(events, null, 2), 'utf8');
     }
 
-    async removeEventById(id) {
+    async removeEventById(id: string): Promise<void> {
         try {
             const events = await this.readEventsFromFile();
             const updatedEvents = events.filter(event => event.id !== id);
@@ -76,14 +77,14 @@ class EventMarket {
         }
     }
 
-    async emitEvent(name, data) {
+    async emitEvent(name: string, data: any): Promise<void> {
         const newEvent = new Event(name, data);
 
         try {
             const events = await this.readEventsFromFile();
             events.push(newEvent);
             await this.writeEventsToFile(events);
-        } catch (error) {
+        } catch (error : any) {
             if (error.code === 'ENOENT') {
                 await this.writeEventsToFile([newEvent]);
             } else {
@@ -92,7 +93,7 @@ class EventMarket {
         }
     }
 
-    handleFileReadError(error) {
+    handleFileReadError(error: any): void {
         if (error.code === 'ENOENT') {
             console.log('Event file not found, skipping check.');
         } else {
@@ -101,4 +102,4 @@ class EventMarket {
     }
 }
 
-module.exports = EventMarket;
+export default EventMarket;

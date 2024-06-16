@@ -1,8 +1,18 @@
-const axios = require('axios');
-const FileManager = require('./crypto_file_manager');
+import axios from 'axios';
+import FileManager from './crypto_file_manager';
+
+interface CryptoDataResponse {
+    symbol: string;
+    priceChange: string;
+    priceChangePercent: string;
+}
 
 class CryptoData {
-    constructor(symbol, maxLogLength, operationDelay, eventMarket) {
+    symbol: string;
+    operationDelay: number;
+    fileManager: FileManager;
+
+    constructor(symbol: string, maxLogLength: number, operationDelay: number, eventMarket: any) {
         this.symbol = symbol;
         this.operationDelay = operationDelay;
         this.fileManager = new FileManager(symbol, maxLogLength, eventMarket);
@@ -10,9 +20,9 @@ class CryptoData {
         this.startFetching();
     }
 
-    async fetchCryptoData() {
+    async fetchCryptoData(): Promise<CryptoDataResponse | null> {
         try {
-            const response = await axios.get(`https://api.binance.com/api/v3/ticker/24hr?symbol=${this.symbol}`);
+            const response = await axios.get<CryptoDataResponse>(`https://api.binance.com/api/v3/ticker/24hr?symbol=${this.symbol}`);
             return response.data;
         } catch (error) {
             console.error(`Error fetching data for ${this.symbol}:`, error);
@@ -20,7 +30,7 @@ class CryptoData {
         }
     }
 
-    async startFetching() {
+    async startFetching(): Promise<void> {
         await this.fileManager.readLogFile();
         setInterval(async () => {
             const data = await this.fetchCryptoData();
@@ -31,4 +41,4 @@ class CryptoData {
     }
 }
 
-module.exports = CryptoData;
+export default CryptoData;
