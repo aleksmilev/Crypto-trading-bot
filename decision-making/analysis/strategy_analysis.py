@@ -1,5 +1,5 @@
 import pandas as pd
-from .base_analysis.py import BaseAnalysis
+from .base_analysis import BaseAnalysis
 
 class StrategyAnalysis(BaseAnalysis):
     def analyze_data_with_strategies(self, data):

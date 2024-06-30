@@ -29,6 +29,16 @@ class EventMarket {
             } else {
                 console.error('Error checking file existence:', error);
             }
+        } finally {
+            await this.resetEventMarketFile();
+        }
+    }
+
+    async resetEventMarketFile(): Promise<void> {
+        try {
+            await this.writeEventsToFile([]);
+        } catch (error) {
+            console.error('Error resetting event market file:', error);
         }
     }
 
@@ -37,10 +47,9 @@ class EventMarket {
     }
 
     async executeEvent(name: string, data: any): Promise<void> {
-        const eventHandler = this.eventList.find(event => event.name === name);
-        if (eventHandler) {
+        const eventsToExecute = this.eventList.filter(event => event.name == name);    
+        for (const eventHandler of eventsToExecute) {
             eventHandler.callback(data);
-            this.eventList = this.eventList.filter(event => event.name !== name);
         }
     }
 
