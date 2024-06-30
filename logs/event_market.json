@@ -1,1 +1,12 @@
-[]
+[
+  {
+    "id": "28362bed-092e-48a7-b3f8-0a62367c5468",
+    "name": "logsReady",
+    "data": "BTCUSDT"
+  },
+  {
+    "id": "09006862-ca74-4452-8830-e97c0aa7a4aa",
+    "name": "logsReady",
+    "data": "ETHUSDT"
+  }
+]

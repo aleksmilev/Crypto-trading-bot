@@ -12,8 +12,8 @@ class BaseAnalysis:
         self.strategies = self.config['strategies']
         self.trading_settings = self.get_trading_settings(crypto)
         self.data_path = Path(__file__).parent.parent / 'logs' / crypto / f'{crypto}_data.json.gz'
-        self.tokenizer = BertTokenizer.from_pretrained('./local_model/bert-base-uncased')
-        self.model = BertForSequenceClassification.from_pretrained('./local_model/bert-base-uncased', num_labels=3)
+        self.tokenizer = BertTokenizer.from_pretrained('../module/module')
+        self.model = BertForSequenceClassification.from_pretrained('../module/module', num_labels=3)
         self.model.eval()
         self.event_market = event_market
         self.account_data = None

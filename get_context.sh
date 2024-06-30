@@ -81,7 +81,7 @@ get_directory_content() {
   for ITEM in "$DIR"/*; do
     local BASE_NAME=$(basename "$ITEM")
 
-    if [[ "$BASE_NAME" == ".env" || "$BASE_NAME" == "node_modules" || "$BASE_NAME" == "dist" ]]; then
+    if [[ "$BASE_NAME" == ".env" || "$BASE_NAME" == "node_modules" || "$BASE_NAME" == "dist" || "$ITEM" =~ "decision-making/module/module" || "$ITEM" =~ "decision-making/module/dataset" ]]; then
       continue
     fi
 
