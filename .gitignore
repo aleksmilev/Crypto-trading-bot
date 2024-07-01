@@ -4,7 +4,9 @@ data-collection/dist
 data-collection/node_modules
 
 logs/account/*.json.gz
+logs/account/*.json
 logs/crypto/*.json.gz
+logs/crypto/*.json
 
 /remove_all.sh
 /set_up.sh
