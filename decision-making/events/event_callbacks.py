@@ -27,6 +27,12 @@ class EventCallbacks:
                 self.last_emit_time = None
                 self.emit_interval = 10  # Adjust as needed
 
+                self.base_analysis = BaseAnalysis(
+                        config_file='/usr/src/app/config.json',
+                        crypto=self.symbol,
+                        event_market=EventCallbacks.event_market
+                    )
+
             def on_modified(self, event):
                 if event.src_path == self.log_file_path and not event.is_directory:
                     now = time.time()
@@ -38,15 +44,12 @@ class EventCallbacks:
                 await EventCallbacks.event_market.emit_event("print", f"Test: {self.symbol} : 1")
 
                 try:
-                    base_analysis = BaseAnalysis(
-                        config_file='/usr/src/app/config.json',
-                        crypto=self.symbol,
-                        event_market=EventCallbacks.event_market
-                    )
-
                     await EventCallbacks.event_market.emit_event("print", f"Test: {self.symbol} : 2")
 
-                    decision, trade_amount = await base_analysis.decide_trade_amount()
+                    decision, trade_amount = await self.base_analysis.decide_trade_amount()
+
+                    await EventCallbacks.event_market.emit_event("print", f"Test: {decision} , {trade_amount} : 3")
+
                     message = f"{self.symbol}={decision.upper()}:{trade_amount:.2f}"
                     await EventCallbacks.event_market.emit_event("print", f"Decision for {self.symbol}: {message}")
 

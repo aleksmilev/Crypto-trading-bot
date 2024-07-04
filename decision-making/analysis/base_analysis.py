@@ -2,7 +2,7 @@ import gzip
 import json
 from pathlib import Path
 import pandas as pd
-from transformers import BertTokenizer, BertForSequenceClassification
+from transformers import AutoModelForMaskedLM, AutoTokenizer
 import torch
 
 class BaseAnalysis:
@@ -11,13 +11,12 @@ class BaseAnalysis:
         self.config = self.load_config(config_file)
         self.strategies = self.config['strategies']
         self.trading_settings = self.get_trading_settings(crypto)
-        self.data_path = Path(__file__).parent.parent / 'logs' / crypto / f'{crypto}_data.json.gz'
-        
-        module_path = Path(__file__).parent.parent / 'module' / 'module'
-        self.tokenizer = BertTokenizer.from_pretrained(module_path)
-        self.model = BertForSequenceClassification.from_pretrained(module_path, num_labels=3)
+        self.data_path = Path(__file__).parent.parent / 'logs' / 'crypto' / f'{crypto}_data.json.gz'
+
+        self.tokenizer = AutoTokenizer.from_pretrained("vedantgoswami/crypto-bert-model")
+        self.model = AutoModelForMaskedLM.from_pretrained("vedantgoswami/crypto-bert-model")
         self.model.eval()
-        
+
         self.event_market = event_market
         self.account_data = None
 
@@ -36,21 +35,41 @@ class BaseAnalysis:
             data = json.loads(f.read())
         return pd.DataFrame(data)
 
-    def analyze_data_with_ai(self, data):
-        inputs = self.tokenizer(data['close'].astype(str).tolist(), return_tensors='pt', padding=True, truncation=True)
-        with torch.no_grad():
-            outputs = self.model(**inputs)
-        probabilities = torch.nn.functional.softmax(outputs.logits, dim=-1)
-        predicted_class = torch.argmax(probabilities, dim=-1).item()
-        return ["hold", "buy", "sell"][predicted_class]
+    async def analyze_data_with_ai(self, data):
+        try:
+            if data is None or data.empty:
+                raise ValueError(f"No data or empty data provided for {self.crypto}.")
+            
+            # Check for required columns or handle data format appropriately
+            if 'close' not in data.columns:
+                raise ValueError(f"'close' column not found in data for {self.crypto}")
+            
+            inputs = self.tokenizer(data['close'].astype(str).tolist(), return_tensors='pt', padding=True, truncation=True)
+            with torch.no_grad():
+                outputs = self.model(**inputs)
+            decision = ["hold", "buy", "sell"][torch.argmax(outputs.logits, dim=-1).item()]
+            return decision
+        except ValueError as ve:
+            await self.event_market.emit_event("print", f"Error analyzing data for {self.crypto}: {str(ve)}")
+            return None
+        except Exception as e:
+            await self.event_market.emit_event("print", f"Error analyzing data for {self.crypto}: {str(e)}")
+            return None
 
-    def perform_ai_analysis(self, data):
-        return self.analyze_data_with_ai(data)
-
-    def make_combined_decision(self):
-        data = self.load_data()
-        ai_result = self.perform_ai_analysis(data)
-        return ai_result
+    async def decide_trade_amount(self):
+        try:
+            data = self.load_data()
+            decision = await self.analyze_data_with_ai(data)
+            if decision is not None:
+                trade_amount = self.calculate_quantity(decision, data.iloc[-1]['close'])
+                message = f"{self.crypto}={decision.upper()}:{trade_amount:.2f}"
+                await self.event_market.emit_event("print", f"Decision for {self.crypto}: {message}")
+            else:
+                await self.event_market.emit_event("print", f"Error processing {self.crypto}: Analysis failed")
+            return decision, trade_amount if decision is not None else None
+        except Exception as e:
+            await self.event_market.emit_event("print", f"Error processing {self.crypto}: {str(e)}")
+            return None, None
 
     def calculate_quantity(self, decision, price):
         balance = self.account_data['balance']
@@ -65,11 +84,3 @@ class BaseAnalysis:
             return min(max_sellable, self.trading_settings.get('max_trade_size', max_sellable))
         
         return 0
-
-    def decide_trade_amount(self):
-        decision = self.make_combined_decision()
-        data = self.load_data()
-        latest_price = data.iloc[-1]['close']
-
-        quantity = self.calculate_quantity(decision, latest_price)
-        return decision, quantity
