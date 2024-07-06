@@ -10,7 +10,6 @@ services:
       - ./config.json:/usr/src/app/dist/config.json
     env_file:
       - .env
-    restart: always
 
   decision-making:
       build:
@@ -21,6 +20,5 @@ services:
         - ./config.json:/usr/src/app/config.json
       env_file:
         - .env
-      restart: always
       depends_on:
         - data-collection
