@@ -5,6 +5,7 @@ import { registerShutdown } from "../lifecycle/shutdown.js";
 import { createLogger } from "../logging/logger.js";
 import { closeQueues } from "../queues/queues.js";
 import { redis } from "../queues/redis.js";
+import { registerBullBoard } from "./admin/bull-board.js";
 import { healthRoutes } from "./routes/health.js";
 import { metricsRoutes } from "./routes/metrics.js";
 import { systemRoutes } from "./routes/system.js";
@@ -17,6 +18,12 @@ const app = Fastify({ loggerInstance: log });
 // Unprefixed routes are for container healthchecks and Prometheus; Caddy only forwards /api/*.
 await app.register(healthRoutes);
 await app.register(metricsRoutes);
+
+if (env.ENABLE_ADMIN_UI) {
+  // Cast: Bull Board's Fastify plugin types conflict with pino's logger generics.
+  await registerBullBoard(app as never);
+  log.info("Bull Board enabled at /admin/queues");
+}
 
 await app.register(
   async api => {

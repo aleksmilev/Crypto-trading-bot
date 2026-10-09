@@ -80,6 +80,28 @@ export function SystemPage() {
         </div>
       </section>
 
+      {status?.adminUiEnabled && status.adminTools.length > 0 && (
+        <section className="card">
+          <h2>Admin tools</h2>
+          <p className="muted section-note">Development only — not exposed in production compose.</p>
+          <div className="admin-links">
+            {status.adminTools.map(tool => (
+              <a
+                key={tool.id}
+                className="admin-link"
+                href={tool.url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <span className="admin-link-name">{tool.name}</span>
+                <span className="admin-link-desc">{tool.description}</span>
+                {tool.hint && <span className="admin-link-hint">{tool.hint}</span>}
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section className="card">
         <h2>Queues</h2>
         <table>

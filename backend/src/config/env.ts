@@ -46,7 +46,15 @@ const envSchema = z.object({
 
   SCHEDULER_TIMEZONE: z.string().min(1).default(DEFAULT_SCHEDULER_TIMEZONE),
 
-  ENABLE_TEST_ROUTES: z.stringbool().default(false)
+  ENABLE_TEST_ROUTES: z.stringbool().default(false),
+
+  // Adminer / Redis Insight / Bull Board links. Only enable in development.
+  ENABLE_ADMIN_UI: z.stringbool().default(false),
+
+  ADMIN_ADMINER_URL: z.string().default("http://localhost:8081"),
+  ADMIN_REDIS_INSIGHT_URL: z.string().default("http://localhost:8082"),
+  ADMIN_BULL_BOARD_URL: z.string().default("/admin/queues"),
+  ADMIN_GRAFANA_URL: z.string().default("http://localhost:3001")
 });
 
 export type Env = z.infer<typeof envSchema>;

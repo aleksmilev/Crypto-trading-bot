@@ -45,7 +45,14 @@ docker compose -f compose.yml -f compose.dev.yml up --build
 | `localhost:3000` | API (dev only) |
 | `localhost:5173` | Vite dev server (dev only) |
 | `localhost:3001` | Grafana (dev only) |
+| `localhost:8081` | Adminer — PostgreSQL (dev only) |
+| `localhost:8082` | Redis Insight (dev only) |
+| `localhost:3000/admin/queues` | Bull Board — BullMQ (dev only) |
 | `localhost:5432` / `localhost:6379` | PostgreSQL / Redis (dev only) |
+
+Admin tools are also linked from the frontend system page when `ENABLE_ADMIN_UI=true` (set automatically by `compose.dev.yml`).
+
+Adminer login: system **PostgreSQL**, server **postgres**, user **trading**, password from `.env`, database **trading**.
 
 > `docker compose down -v` deletes all volumes, including market history and trade records.
 

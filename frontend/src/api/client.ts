@@ -13,12 +13,22 @@ export interface QueueStatus {
   counts: Record<string, number>;
 }
 
+export interface AdminTool {
+  id: string;
+  name: string;
+  description: string;
+  url: string;
+  hint?: string;
+}
+
 export interface SystemStatus {
   appName: string;
   nodeEnv: string;
   tradingEnabled: boolean;
   tradingMode: "shadow" | "paper" | "live";
   testRoutesEnabled: boolean;
+  adminUiEnabled: boolean;
+  adminTools: AdminTool[];
   queues: QueueStatus[];
 }
 

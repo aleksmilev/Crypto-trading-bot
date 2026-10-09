@@ -5,6 +5,11 @@
 		reverse_proxy api:3000
 	}
 
+	# Bull Board (enabled only when ENABLE_ADMIN_UI=true on the API).
+	handle /admin/* {
+		reverse_proxy api:3000
+	}
+
 	# compose.dev.yml points this at the Vite dev server (frontend:5173).
 	handle {
 		reverse_proxy {$FRONTEND_UPSTREAM:frontend:80}

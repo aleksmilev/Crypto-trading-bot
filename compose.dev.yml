@@ -1,4 +1,4 @@
-# Development override: hot reload, source mounts and direct ports.
+# Development override: hot reload, source mounts, direct ports, admin UIs.
 #   docker compose -f compose.yml -f compose.dev.yml up --build
 
 x-backend-dev: &backend-dev
@@ -37,6 +37,9 @@ services:
   api:
     <<: *backend-dev
     command: ["npx", "tsx", "watch", "src/api/server.ts"]
+    environment:
+      NODE_ENV: development
+      ENABLE_ADMIN_UI: "true"
     ports:
       - "3000:3000"
 
@@ -78,3 +81,43 @@ services:
   grafana:
     ports:
       - "3001:3000"
+
+  # Dev-only admin UIs (not in production compose).
+  adminer:
+    image: adminer:4
+    container_name: trading-adminer
+    restart: unless-stopped
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+      ADMINER_DESIGN: pepa-linha-dark
+    ports:
+      - "8081:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - backend-net
+      - egress-net
+
+  redis-insight:
+    image: redis/redisinsight:latest
+    container_name: trading-redis-insight
+    restart: unless-stopped
+    environment:
+      RI_REDIS_HOST: redis
+      RI_REDIS_PORT: "6379"
+      RI_REDIS_ALIAS: trading-redis
+    ports:
+      - "8082:5540"
+    volumes:
+      - redis_insight_data:/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - backend-net
+      - egress-net
+
+
+volumes:
+  redis_insight_data:

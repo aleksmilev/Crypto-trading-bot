@@ -17,6 +17,8 @@
     "db:migrate": "tsx src/db/migrate.ts"
   },
   "dependencies": {
+    "@bull-board/api": "^6.21.3",
+    "@bull-board/fastify": "^6.21.3",
     "bullmq": "^5.81.5",
     "drizzle-orm": "^0.45.4",
     "fastify": "^5.12.5",
