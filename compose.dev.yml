@@ -1,0 +1,80 @@
+# Development override: hot reload, source mounts and direct ports.
+#   docker compose -f compose.yml -f compose.dev.yml up --build
+
+x-backend-dev: &backend-dev
+  build:
+    target: dev
+  image: ai-trading-backend:dev
+  environment:
+    NODE_ENV: development
+  volumes:
+    - ./backend/src:/app/src
+
+
+services:
+
+  caddy:
+    environment:
+      FRONTEND_UPSTREAM: frontend:5173
+
+  frontend:
+    build:
+      target: dev
+    image: ai-trading-frontend:dev
+    environment:
+      VITE_API_PROXY_TARGET: http://api:3000
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/vite.config.ts:/app/vite.config.ts
+    ports:
+      - "5173:5173"
+
+  migrate:
+    <<: *backend-dev
+    command: ["npx", "tsx", "src/db/migrate.ts"]
+
+  api:
+    <<: *backend-dev
+    command: ["npx", "tsx", "watch", "src/api/server.ts"]
+    ports:
+      - "3000:3000"
+
+  scheduler:
+    <<: *backend-dev
+    command: ["npx", "tsx", "watch", "src/scheduler/scheduler.ts"]
+
+  market-worker:
+    <<: *backend-dev
+    command: ["npx", "tsx", "watch", "src/workers/market.worker.ts"]
+
+  feature-worker:
+    <<: *backend-dev
+    command: ["npx", "tsx", "watch", "src/workers/features.worker.ts"]
+
+  ai-worker:
+    <<: *backend-dev
+    command: ["npx", "tsx", "watch", "src/workers/ai.worker.ts"]
+
+  execution-worker:
+    <<: *backend-dev
+    command: ["npx", "tsx", "watch", "src/workers/execution.worker.ts"]
+
+  # Port publishing needs a non-internal network, so attach egress-net in development only.
+  postgres:
+    ports:
+      - "5432:5432"
+    networks:
+      - backend-net
+      - egress-net
+
+  redis:
+    ports:
+      - "6379:6379"
+    networks:
+      - backend-net
+      - egress-net
+
+  grafana:
+    ports:
+      - "3001:3000"

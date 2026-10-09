@@ -1,0 +1,222 @@
+# Production-style stack. For development add the override:
+#   docker compose -f compose.yml -f compose.dev.yml up --build
+
+x-backend: &backend
+  build:
+    context: ./backend
+    dockerfile: Dockerfile
+  image: ai-trading-backend:local
+  restart: unless-stopped
+  env_file:
+    - .env
+  environment:
+    NODE_ENV: production
+    DATABASE_URL: postgres://trading:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/trading
+    REDIS_URL: redis://redis:6379
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+    migrate:
+      condition: service_completed_successfully
+  networks:
+    - backend-net
+
+
+services:
+
+  caddy:
+    image: caddy:2
+    container_name: trading-caddy
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+      - api
+    networks:
+      - frontend-net
+
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: ai-trading-frontend:local
+    container_name: trading-frontend
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - frontend-net
+
+
+  # One-shot: applies Drizzle migrations before any other backend service starts.
+  migrate:
+    <<: *backend
+    container_name: trading-migrate
+    restart: "no"
+    command: ["node", "dist/db/migrate.js"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+
+  api:
+    <<: *backend
+    container_name: trading-api
+    command: ["node", "dist/api/server.js"]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - frontend-net
+      - backend-net
+
+
+  scheduler:
+    <<: *backend
+    container_name: trading-scheduler
+    command: ["node", "dist/scheduler/scheduler.js"]
+
+
+  market-worker:
+    <<: *backend
+    container_name: trading-market-worker
+    command: ["node", "dist/workers/market.worker.js"]
+    networks:
+      - backend-net
+      - egress-net
+
+
+  feature-worker:
+    <<: *backend
+    container_name: trading-feature-worker
+    command: ["node", "dist/workers/features.worker.js"]
+
+
+  ai-worker:
+    <<: *backend
+    container_name: trading-ai-worker
+    command: ["node", "dist/workers/ai.worker.js"]
+    networks:
+      - backend-net
+      - egress-net
+
+
+  execution-worker:
+    <<: *backend
+    container_name: trading-execution-worker
+    command: ["node", "dist/workers/execution.worker.js"]
+    env_file:
+      - .env
+      - .env.execution
+    networks:
+      - backend-net
+      - egress-net
+
+
+  postgres:
+    image: timescale/timescaledb:latest-pg17
+    container_name: trading-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: trading
+      POSTGRES_USER: trading
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      # TCP check: the temporary init-time server listens on the socket only, so this
+      # stays unhealthy until initialization has finished.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U trading -d trading"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - backend-net
+
+
+  redis:
+    image: redis:8-alpine
+    container_name: trading-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend-net
+
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: trading-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - backend-net
+
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: trading-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?set GRAFANA_PASSWORD in .env}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+    networks:
+      - frontend-net
+      - backend-net
+
+
+networks:
+
+  # Web-facing services (Caddy, frontend, API, Grafana).
+  frontend-net:
+    driver: bridge
+
+  # Private infrastructure; no route to the host or internet.
+  backend-net:
+    driver: bridge
+    internal: true
+
+  # Outbound internet for workers that call market, AI or broker APIs.
+  egress-net:
+    driver: bridge
+
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+  caddy_data:
+  caddy_config:
