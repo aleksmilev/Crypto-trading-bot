@@ -54,7 +54,11 @@ const envSchema = z.object({
   ADMIN_ADMINER_URL: z.string().default("http://localhost:8081"),
   ADMIN_REDIS_INSIGHT_URL: z.string().default("http://localhost:8082"),
   ADMIN_BULL_BOARD_URL: z.string().default("/admin/queues"),
-  ADMIN_GRAFANA_URL: z.string().default("http://localhost:3001")
+  ADMIN_GRAFANA_URL: z.string().default("http://localhost:3001"),
+
+  // Shown in the frontend admin panel when ENABLE_ADMIN_UI=true (dev only).
+  GRAFANA_PASSWORD: z.string().optional(),
+  GRAFANA_USER: z.string().default("admin")
 });
 
 export type Env = z.infer<typeof envSchema>;

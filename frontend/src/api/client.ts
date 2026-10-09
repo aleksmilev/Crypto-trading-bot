@@ -13,12 +13,18 @@ export interface QueueStatus {
   counts: Record<string, number>;
 }
 
+export interface CredentialField {
+  label: string;
+  value: string;
+}
+
 export interface AdminTool {
   id: string;
   name: string;
   description: string;
   url: string;
   hint?: string;
+  credentials?: CredentialField[];
 }
 
 export interface SystemStatus {

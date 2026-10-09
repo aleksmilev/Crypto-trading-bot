@@ -6,6 +6,7 @@ import {
   type SystemStatus,
   type TestJobKind
 } from "../api/client";
+import { CopyField } from "../components/CopyField";
 import { StatusBadge } from "../components/StatusBadge";
 import { STATUS_REFRESH_INTERVAL_MS } from "../config";
 
@@ -83,20 +84,29 @@ export function SystemPage() {
       {status?.adminUiEnabled && status.adminTools.length > 0 && (
         <section className="card">
           <h2>Admin tools</h2>
-          <p className="muted section-note">Development only — not exposed in production compose.</p>
-          <div className="admin-links">
+          <p className="muted section-note">
+            Development only — credentials are shown because ENABLE_ADMIN_UI is on.
+          </p>
+          <div className="admin-tools">
             {status.adminTools.map(tool => (
-              <a
-                key={tool.id}
-                className="admin-link"
-                href={tool.url}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <span className="admin-link-name">{tool.name}</span>
-                <span className="admin-link-desc">{tool.description}</span>
-                {tool.hint && <span className="admin-link-hint">{tool.hint}</span>}
-              </a>
+              <div key={tool.id} className="admin-tool">
+                <div className="admin-tool-header">
+                  <div>
+                    <span className="admin-link-name">{tool.name}</span>
+                    <span className="admin-link-desc">{tool.description}</span>
+                  </div>
+                  <a className="admin-open" href={tool.url} target="_blank" rel="noreferrer">
+                    Open
+                  </a>
+                </div>
+                {tool.credentials && tool.credentials.length > 0 && (
+                  <div className="credential-list">
+                    {tool.credentials.map(field => (
+                      <CopyField key={field.label} label={field.label} value={field.value} />
+                    ))}
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         </section>
