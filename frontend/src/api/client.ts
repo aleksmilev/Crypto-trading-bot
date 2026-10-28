@@ -1,72 +1,97 @@
 import { API_BASE_URL } from "../config";
 
-export interface HealthResponse {
-  status: "ok" | "degraded";
-  postgres: "ok" | "error";
-  redis: "ok" | "error";
-  tradingEnabled: boolean;
-  tradingMode: "shadow" | "paper" | "live";
-}
-
-export interface QueueStatus {
-  name: string;
-  counts: Record<string, number>;
-}
-
-export interface CredentialField {
-  label: string;
-  value: string;
-}
-
-export interface AdminTool {
-  id: string;
-  name: string;
-  description: string;
-  url: string;
-  hint?: string;
-  credentials?: CredentialField[];
+export interface ServiceReady {
+  service: string;
+  ready: boolean;
+  instance: string;
 }
 
 export interface SystemStatus {
   appName: string;
-  nodeEnv: string;
-  tradingEnabled: boolean;
-  tradingMode: "shadow" | "paper" | "live";
-  testRoutesEnabled: boolean;
-  adminUiEnabled: boolean;
-  adminTools: AdminTool[];
-  queues: QueueStatus[];
+  env: string;
+  services: ServiceReady[];
 }
 
-export interface JobEvent {
-  id: number;
-  service: string;
-  queue: string;
-  jobName: string;
-  jobId: string | null;
+export interface Run {
+  id: string;
+  jobType: string;
+  trigger: string;
   status: string;
-  payload: unknown;
+  error?: string;
+  summary: Record<string, unknown>;
+  startedAt: string;
+  endedAt?: string;
+}
+
+export interface RunStep {
+  id: string;
+  runId: string;
+  step: string;
+  service: string;
+  instance: string;
+  status: "ok" | "error";
+  request: unknown;
+  response: unknown;
+  durationMs: number;
   createdAt: string;
 }
 
-export type TestJobKind = "market-job" | "ai-job" | "execution-job";
+export interface Summary {
+  total: number;
+  byStatus: Record<string, number>;
+  lastSuccess: string | null;
+  tradesToday: number;
+}
+
+export interface CandlesView {
+  symbol: string;
+  candles: Array<{
+    timestamp: string;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number;
+  }>;
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, init);
   const body = (await response.json()) as T;
 
-  // /health returns a useful body with 503, so callers get it either way.
-  if (!response.ok && response.status !== 503) {
-    throw new Error(`${init?.method ?? "GET"} ${path} failed with ${response.status}`);
+  if (!response.ok) {
+    const error = body && typeof body === "object" && "error" in body ? String(body.error) : `${response.status}`;
+    throw new Error(`${init?.method ?? "GET"} ${path} failed: ${error}`);
   }
 
   return body;
 }
 
 export const api = {
-  health: () => request<HealthResponse>("/health"),
   systemStatus: () => request<SystemStatus>("/system/status"),
-  jobEvents: () => request<{ events: JobEvent[] }>("/test/job-events"),
-  enqueueTestJob: (kind: TestJobKind) =>
-    request<{ queued: boolean; jobId: string }>(`/test/${kind}`, { method: "POST" })
+  startCycle: () => request<{ runId: string; status: string }>("/cycles", { method: "POST" }),
+  runs: (params?: { limit?: number; offset?: number; status?: string }) => {
+    const query = new URLSearchParams();
+    if (params?.limit) query.set("limit", String(params.limit));
+    if (params?.offset) query.set("offset", String(params.offset));
+    if (params?.status) query.set("status", params.status);
+    return request<{ runs: Run[] }>(`/runs?${query.toString()}`);
+  },
+  run: (id: string) => request<{ run: Run | null; steps: RunStep[] }>(`/runs/${id}`),
+  summary: () => request<Summary>("/summary"),
+
+  marketLatest: () => request<{ latest: unknown }>("/market/latest"),
+  marketCandles: (symbol: string, limit = 100) =>
+    request<CandlesView>(`/market/candles?symbol=${symbol}&limit=${limit}`),
+
+  featuresLatest: () => request<{ latest: unknown }>("/features/latest"),
+
+  aiDecisions: () => request<{ decisions: unknown[] }>("/ai/decisions"),
+  aiLatest: () => request<{ latest: unknown }>("/ai/latest"),
+
+  riskValidations: () => request<{ validations: unknown[] }>("/risk/validations"),
+
+  wallet: () => request<{ balances: Array<{ symbol: string; amount: number }> }>("/execution/wallet"),
+  positions: () => request<{ positions: Array<{ symbol: string; amount: number }> }>("/execution/positions"),
+  orders: () => request<{ orders: unknown[] }>("/execution/orders")
 };

@@ -1,0 +1,27 @@
+{
+  "name": "@trading/db",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./schema": "./dist/schema/index.js",
+    "./migrate": "./dist/migrate.js"
+  },
+  "scripts": {
+    "build": "tsc && cp -r src/migrations dist/migrations",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsc --watch",
+    "migrate": "node dist/migrate.js"
+  },
+  "dependencies": {
+    "@trading/shared": "*",
+    "drizzle-orm": "^0.45.4",
+    "pg": "^8.23.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/pg": "^8.23.1",
+    "typescript": "^5.9.3"
+  }
+}

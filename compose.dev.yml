@@ -1,28 +1,24 @@
 # Development override: hot reload, source mounts, direct ports, admin UIs.
 #   docker compose -f compose.yml -f compose.dev.yml up --build
 
-x-backend-dev: &backend-dev
+x-service-dev: &service-dev
   build:
     target: dev
-  image: ai-trading-backend:dev
-  environment:
-    NODE_ENV: development
   volumes:
-    - ./backend/src:/app/src
-
+    - ./packages/shared/src:/app/packages/shared/src
+    - ./packages/db/src:/app/packages/db/src
 
 services:
-
   caddy:
     environment:
-      FRONTEND_UPSTREAM: frontend:5173
+      ALLOWED_CLIENT_IPS: ${ALLOWED_CLIENT_IPS:-127.0.0.1}
 
   frontend:
     build:
       target: dev
     image: ai-trading-frontend:dev
     environment:
-      VITE_API_PROXY_TARGET: http://api:3000
+      VITE_API_PROXY_TARGET: http://gateway:3000
     volumes:
       - ./frontend/src:/app/src
       - ./frontend/index.html:/app/index.html
@@ -30,50 +26,59 @@ services:
     ports:
       - "5173:5173"
 
-  migrate:
-    <<: *backend-dev
-    command: ["npx", "tsx", "src/db/migrate.ts"]
-
-  api:
-    <<: *backend-dev
-    command: ["npx", "tsx", "watch", "src/api/server.ts"]
-    environment:
-      NODE_ENV: development
-      ENABLE_ADMIN_UI: "true"
+  gateway:
+    <<: *service-dev
+    volumes:
+      - ./packages/shared/src:/app/packages/shared/src
+      - ./services/gateway/src:/app/services/gateway/src
     ports:
       - "3000:3000"
 
-  scheduler:
-    <<: *backend-dev
-    command: ["npx", "tsx", "watch", "src/scheduler/scheduler.ts"]
+  manager:
+    <<: *service-dev
+    volumes:
+      - ./packages/shared/src:/app/packages/shared/src
+      - ./packages/db/src:/app/packages/db/src
+      - ./services/manager/src:/app/services/manager/src
 
-  market-worker:
-    <<: *backend-dev
-    command: ["npx", "tsx", "watch", "src/workers/market.worker.ts"]
+  market:
+    <<: *service-dev
+    volumes:
+      - ./packages/shared/src:/app/packages/shared/src
+      - ./packages/db/src:/app/packages/db/src
+      - ./services/market/src:/app/services/market/src
 
-  feature-worker:
-    <<: *backend-dev
-    command: ["npx", "tsx", "watch", "src/workers/features.worker.ts"]
+  features:
+    <<: *service-dev
+    volumes:
+      - ./packages/shared/src:/app/packages/shared/src
+      - ./packages/db/src:/app/packages/db/src
+      - ./services/features/src:/app/services/features/src
 
-  ai-worker:
-    <<: *backend-dev
-    command: ["npx", "tsx", "watch", "src/workers/ai.worker.ts"]
+  ai:
+    <<: *service-dev
+    volumes:
+      - ./packages/shared/src:/app/packages/shared/src
+      - ./packages/db/src:/app/packages/db/src
+      - ./services/ai/src:/app/services/ai/src
 
-  execution-worker:
-    <<: *backend-dev
-    command: ["npx", "tsx", "watch", "src/workers/execution.worker.ts"]
+  risk:
+    <<: *service-dev
+    volumes:
+      - ./packages/shared/src:/app/packages/shared/src
+      - ./packages/db/src:/app/packages/db/src
+      - ./services/risk/src:/app/services/risk/src
 
-  # Port publishing needs a non-internal network, so attach egress-net in development only.
+  execution:
+    <<: *service-dev
+    volumes:
+      - ./packages/shared/src:/app/packages/shared/src
+      - ./packages/db/src:/app/packages/db/src
+      - ./services/execution/src:/app/services/execution/src
+
   postgres:
     ports:
       - "5432:5432"
-    networks:
-      - backend-net
-      - egress-net
-
-  redis:
-    ports:
-      - "6379:6379"
     networks:
       - backend-net
       - egress-net
@@ -82,14 +87,12 @@ services:
     ports:
       - "3001:3000"
 
-  # Dev-only admin UIs (not in production compose).
   adminer:
     image: adminer:4
     container_name: trading-adminer
     restart: unless-stopped
     environment:
       ADMINER_DEFAULT_SERVER: postgres
-      ADMINER_DESIGN: pepa-linha-dark
     ports:
       - "8081:8080"
     depends_on:
@@ -98,26 +101,6 @@ services:
     networks:
       - backend-net
       - egress-net
-
-  redis-insight:
-    image: redis/redisinsight:latest
-    container_name: trading-redis-insight
-    restart: unless-stopped
-    environment:
-      RI_REDIS_HOST: redis
-      RI_REDIS_PORT: "6379"
-      RI_REDIS_ALIAS: trading-redis
-    ports:
-      - "8082:5540"
-    volumes:
-      - redis_insight_data:/data
-    depends_on:
-      redis:
-        condition: service_healthy
-    networks:
-      - backend-net
-      - egress-net
-
 
 volumes:
   redis_insight_data:

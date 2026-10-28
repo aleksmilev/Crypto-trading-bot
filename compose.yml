@@ -1,136 +1,244 @@
 # Production-style stack. For development add the override:
 #   docker compose -f compose.yml -f compose.dev.yml up --build
 
-x-backend: &backend
+x-service: &service
   build:
-    context: ./backend
-    dockerfile: Dockerfile
-  image: ai-trading-backend:local
-  restart: unless-stopped
+    context: .
+    dockerfile: services/${COMPOSE_SERVICE_NAME}/Dockerfile
   env_file:
     - .env
-  environment:
-    NODE_ENV: production
-    DATABASE_URL: postgres://trading:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/trading
-    REDIS_URL: redis://redis:6379
-  depends_on:
-    postgres:
-      condition: service_healthy
-    redis:
-      condition: service_healthy
-    migrate:
-      condition: service_completed_successfully
+    - .env.db
+  restart: unless-stopped
   networks:
     - backend-net
 
-
 services:
-
   caddy:
     image: caddy:2
     container_name: trading-caddy
     restart: unless-stopped
     ports:
       - "${HTTP_PORT:-80}:80"
-      - "${HTTPS_PORT:-443}:443"
     volumes:
       - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+    environment:
+      ALLOWED_CLIENT_IPS: ${ALLOWED_CLIENT_IPS:-127.0.0.1}
     depends_on:
+      - gateway
       - frontend
-      - api
     networks:
       - frontend-net
 
-
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/Dockerfile
     image: ai-trading-frontend:local
     container_name: trading-frontend
     restart: unless-stopped
     depends_on:
-      api:
-        condition: service_healthy
+      - gateway
     networks:
       - frontend-net
 
-
-  # One-shot: applies Drizzle migrations before any other backend service starts.
-  migrate:
-    <<: *backend
-    container_name: trading-migrate
-    restart: "no"
-    command: ["node", "dist/db/migrate.js"]
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-
-  api:
-    <<: *backend
-    container_name: trading-api
-    command: ["node", "dist/api/server.js"]
+  gateway:
+    <<: *service
+    container_name: trading-gateway
+    build:
+      context: .
+      dockerfile: services/gateway/Dockerfile
+    environment:
+      ALLOWED_CALLER_CIDRS: 172.21.0.0/24,127.0.0.1
     healthcheck:
       test:
-        [
-          "CMD",
-          "node",
-          "-e",
-          "fetch('http://localhost:3000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
-        ]
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 10s
     networks:
-      - frontend-net
-      - backend-net
+      frontend-net:
+        ipv4_address: 172.21.0.11
+      backend-net:
+        ipv4_address: 172.20.0.11
 
-
-  scheduler:
-    <<: *backend
-    container_name: trading-scheduler
-    command: ["node", "dist/scheduler/scheduler.js"]
-
-
-  market-worker:
-    <<: *backend
-    container_name: trading-market-worker
-    command: ["node", "dist/workers/market.worker.js"]
+  manager:
+    <<: *service
+    container_name: trading-manager
+    build:
+      context: .
+      dockerfile: services/manager/Dockerfile
+    environment:
+      DATABASE_URL: postgres://trading_manager:${DB_PASSWORD_MANAGER}@postgres:5432/trading
+      ALLOWED_CALLER_CIDRS: 172.20.0.11,127.0.0.1
+      MANAGER_IP: 172.20.0.10
+      GATEWAY_IP: 172.20.0.11
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      market:
+        condition: service_healthy
+      features:
+        condition: service_healthy
+      ai:
+        condition: service_healthy
+      risk:
+        condition: service_healthy
+      execution:
+        condition: service_healthy
     networks:
-      - backend-net
-      - egress-net
+      backend-net:
+        ipv4_address: 172.20.0.10
 
-
-  feature-worker:
-    <<: *backend
-    container_name: trading-feature-worker
-    command: ["node", "dist/workers/features.worker.js"]
-
-
-  ai-worker:
-    <<: *backend
-    container_name: trading-ai-worker
-    command: ["node", "dist/workers/ai.worker.js"]
-    networks:
-      - backend-net
-      - egress-net
-
-
-  execution-worker:
-    <<: *backend
-    container_name: trading-execution-worker
-    command: ["node", "dist/workers/execution.worker.js"]
+  market:
+    <<: *service
+    container_name: trading-market
+    build:
+      context: .
+      dockerfile: services/market/Dockerfile
     env_file:
       - .env
-      - .env.execution
+      - .env.db
+      - .env.market
+    environment:
+      ALLOWED_CALLER_CIDRS: 172.20.0.0/24,127.0.0.1
+      DATABASE_URL: postgres://trading_market:${DB_PASSWORD_MARKET}@postgres:5432/trading
+      MANAGER_IP: 172.20.0.10
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - backend-net
       - egress-net
 
+  features:
+    <<: *service
+    container_name: trading-features
+    build:
+      context: .
+      dockerfile: services/features/Dockerfile
+    environment:
+      ALLOWED_CALLER_CIDRS: 172.20.0.0/24,127.0.0.1
+      DATABASE_URL: postgres://trading_features:${DB_PASSWORD_FEATURES}@postgres:5432/trading
+      MANAGER_IP: 172.20.0.10
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  ai:
+    <<: *service
+    container_name: trading-ai
+    build:
+      context: .
+      dockerfile: services/ai/Dockerfile
+    env_file:
+      - .env
+      - .env.db
+      - .env.ai
+    environment:
+      ALLOWED_CALLER_CIDRS: 172.20.0.0/24,127.0.0.1
+      DATABASE_URL: postgres://trading_ai:${DB_PASSWORD_AI}@postgres:5432/trading
+      MANAGER_IP: 172.20.0.10
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - backend-net
+      - egress-net
+
+  risk:
+    <<: *service
+    container_name: trading-risk
+    build:
+      context: .
+      dockerfile: services/risk/Dockerfile
+    environment:
+      ALLOWED_CALLER_CIDRS: 172.20.0.0/24,127.0.0.1
+      DATABASE_URL: postgres://trading_risk:${DB_PASSWORD_RISK}@postgres:5432/trading
+      MANAGER_IP: 172.20.0.10
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  execution:
+    <<: *service
+    container_name: trading-execution
+    build:
+      context: .
+      dockerfile: services/execution/Dockerfile
+    env_file:
+      - .env
+      - .env.db
+      - .env.execution
+    environment:
+      ALLOWED_CALLER_CIDRS: 172.20.0.0/24,127.0.0.1
+      DATABASE_URL: postgres://trading_execution:${DB_PASSWORD_EXECUTION}@postgres:5432/trading
+      MANAGER_IP: 172.20.0.10
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - backend-net
+      - egress-net
+
+  migrate:
+    build:
+      context: .
+      dockerfile: packages/db/Dockerfile
+    container_name: trading-migrate
+    restart: "no"
+    env_file:
+      - .env
+      - .env.db
+    environment:
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@postgres:5432/trading
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - backend-net
 
   postgres:
     image: timescale/timescaledb:latest-pg17
@@ -138,37 +246,18 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_DB: trading
-      POSTGRES_USER: trading
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      # TCP check: the temporary init-time server listens on the socket only, so this
-      # stays unhealthy until initialization has finished.
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U trading -d trading"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d trading"]
       interval: 10s
       timeout: 5s
       retries: 10
     networks:
-      - backend-net
-
-
-  redis:
-    image: redis:8-alpine
-    container_name: trading-redis
-    restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - backend-net
-
+      backend-net:
+        ipv4_address: 172.20.0.2
 
   prometheus:
     image: prom/prometheus:latest
@@ -179,7 +268,6 @@ services:
       - prometheus_data:/prometheus
     networks:
       - backend-net
-
 
   grafana:
     image: grafana/grafana:latest
@@ -196,26 +284,23 @@ services:
       - frontend-net
       - backend-net
 
-
 networks:
-
-  # Web-facing services (Caddy, frontend, API, Grafana).
   frontend-net:
     driver: bridge
-
-  # Private infrastructure; no route to the host or internet.
+    ipam:
+      config:
+        - subnet: 172.21.0.0/24
   backend-net:
     driver: bridge
     internal: true
-
-  # Outbound internet for workers that call market, AI or broker APIs.
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
   egress-net:
     driver: bridge
 
-
 volumes:
   postgres_data:
-  redis_data:
   prometheus_data:
   grafana_data:
   caddy_data:

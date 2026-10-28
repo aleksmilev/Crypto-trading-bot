@@ -206,3 +206,62 @@ th {
   color: #8b929c;
   font-weight: 500;
 }
+
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+  border-bottom: 1px solid #262b35;
+  padding-bottom: 0.5rem;
+}
+
+.tabs button {
+  background: transparent;
+  color: #8b929c;
+  border-radius: 0;
+}
+
+.tabs button.active {
+  color: #e6e8eb;
+  border-bottom: 2px solid #2b5fd9;
+}
+
+.tabs button:hover {
+  color: #e6e8eb;
+}
+
+.split {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 1.25rem;
+}
+
+.run-list tbody tr {
+  cursor: pointer;
+}
+
+.run-list tbody tr.selected {
+  background: #1c2333;
+}
+
+.run-list tbody tr:hover {
+  background: #1c2333;
+}
+
+.run-detail pre {
+  max-height: 400px;
+  overflow: auto;
+  background: #0f1115;
+  padding: 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+
+pre {
+  background: #0f1115;
+  padding: 0.75rem;
+  border-radius: 6px;
+  overflow: auto;
+  font-size: 0.85rem;
+}
+

@@ -1,0 +1,22 @@
+{
+  "name": "ai-trading-bot",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "services/*",
+    "frontend"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "dev": "docker compose -f compose.yml -f compose.dev.yml up --build",
+    "prod": "docker compose up -d --build",
+    "down": "docker compose down",
+    "down:volumes": "docker compose down -v"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

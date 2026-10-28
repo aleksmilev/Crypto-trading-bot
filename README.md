@@ -1,109 +1,134 @@
 # AI Trading Bot
 
-Locally hosted, AI-assisted trading platform. The AI proposes, a deterministic risk engine validates, and only the isolated execution worker can talk to the broker.
+Locally hosted, AI-assisted trading platform built as one-image-per-service REST microservices.
 
-This repository currently contains the **infrastructure foundation**: every service boots, and jobs flow `API → Redis/BullMQ → workers → PostgreSQL`. Market data, features, AI, risk and broker logic come in later phases.
+The AI proposes, a deterministic risk engine validates, and only the isolated execution worker can talk to the broker.
 
 ## Services
 
-| Service | Command | Purpose |
-|---|---|---|
-| `api` | `dist/api/server.js` | Fastify API, health, status |
-| `scheduler` | `dist/scheduler/scheduler.js` | Registers BullMQ job schedulers |
-| `market-worker` | `dist/workers/market.worker.js` | `market-data` queue, chains `features` |
-| `feature-worker` | `dist/workers/features.worker.js` | `features` queue |
-| `ai-worker` | `dist/workers/ai.worker.js` | `ai-analysis` queue |
-| `execution-worker` | `dist/workers/execution.worker.js` | `trade-execution` queue, only holder of broker keys |
-| `migrate` | `dist/db/migrate.js` | One-shot Drizzle migrations |
+| Service | Responsibility | Secrets |
+|---------|----------------|---------|
+| `gateway` | Browser entry; proxies reads to workers and cycle starts to manager | none |
+| `manager` | Scheduler and workflow orchestrator; owns run/step audit log | none |
+| `market` | Pull and store OHLCV candles | market API key (if any) |
+| `features` | Compute indicators from candles | none |
+| `ai` | Build structured trade proposal from features | AI API key |
+| `risk` | Deterministic validation and sizing | none |
+| `execution` | Wallet, positions, orders; place trades with broker | broker API key + secret |
+| `migrate` | One-shot Drizzle migrations and DB role grants | Postgres superuser |
 
-All backend services share one image (`backend/Dockerfile`); only the command differs.
+## Architecture
+
+See [docs/architecture-and-execution.md](docs/architecture-and-execution.md) for the full design.
+
+```text
+Browser -> Caddy -> Gateway -> Manager -> Market -> Features -> AI -> Risk -> Execution
+                                 |                                    |
+                                 v                                    v
+                              Postgres                            Broker / LLM
+```
 
 ## Getting started
 
 ```bash
-cp .env.example .env                       # set POSTGRES_PASSWORD and GRAFANA_PASSWORD
-cp .env.execution.example .env.execution
-chmod 600 .env .env.execution
+cp .env.example .env                       # shared config
+cp .env.db.example .env.db               # per-service DB passwords
+cp .env.execution.example .env.execution   # broker credentials
+cp .env.ai.example .env.ai               # optional AI key
+cp .env.market.example .env.market       # optional market provider key
+chmod 600 .env .env.db .env.execution .env.ai .env.market
 ```
 
-Production-style stack:
+Edit `.env` and set at least:
+
+- `POSTGRES_PASSWORD`
+- `GRAFANA_PASSWORD`
+- `ALLOWED_CLIENT_IPS` (your PC IP, e.g. `192.168.1.42`)
+
+### Production-style stack
 
 ```bash
 docker compose up -d --build
 ```
 
-Development (hot reload, source mounts, direct ports):
+| URL | What |
+|-----|------|
+| `http://localhost/` | Frontend via Caddy |
+| `http://localhost/api/system/status` | Aggregated service status |
+| `http://localhost/api/cycles` | POST to start a cycle |
+
+### Development (hot reload)
 
 ```bash
 docker compose -f compose.yml -f compose.dev.yml up --build
 ```
 
 | URL | What |
-|---|---|
-| `http://localhost/` | Frontend via Caddy (`HTTP_PORT` to change) |
-| `http://localhost/api/health` | API health via Caddy |
-| `localhost:3000` | API (dev only) |
-| `localhost:5173` | Vite dev server (dev only) |
-| `localhost:3001` | Grafana (dev only) |
-| `localhost:8081` | Adminer — PostgreSQL (dev only) |
-| `localhost:8082` | Redis Insight (dev only) |
-| `localhost:3000/admin/queues` | Bull Board — BullMQ (dev only) |
-| `localhost:5432` / `localhost:6379` | PostgreSQL / Redis (dev only) |
+|-----|------|
+| `http://localhost/` | Frontend via Caddy |
+| `http://localhost:5173/` | Vite dev server |
+| `http://localhost:3000/api/system/status` | Gateway direct |
+| `http://localhost:3001` | Grafana |
+| `http://localhost:8081` | Adminer (PostgreSQL) |
 
-Admin tools are also linked from the frontend system page when `ENABLE_ADMIN_UI=true` (set automatically by `compose.dev.yml`).
-
-Adminer login: system **PostgreSQL**, server **postgres**, user **trading**, password from `.env`, database **trading**.
+Adminer login: system **PostgreSQL**, server **postgres**, user **postgres**, password from `.env`, database **trading**.
 
 > `docker compose down -v` deletes all volumes, including market history and trade records.
 
-## Pipeline smoke test
+## Running a cycle
 
-With `ENABLE_TEST_ROUTES=true`:
+- **Manual:** click "Start cycle" in the frontend Dashboard, or `curl -X POST http://localhost/api/cycles`.
+- **Scheduled:** manager runs on `CYCLE_CRON` (default every 5 minutes in `.env`).
 
-```bash
-curl -X POST localhost/api/test/market-job      # market-worker → feature-worker
-curl -X POST localhost/api/test/ai-job
-curl -X POST localhost/api/test/execution-job   # recorded as "blocked" in shadow mode
-curl localhost/api/test/job-events
-```
-
-The frontend's system page shows the same information.
+In `TRADING_MODE=shadow` (default) the cycle collects market data, computes features, asks AI, validates risk, and skips real execution while recording a `blocked` order for audit.
 
 ## Configuration
 
 | Layer | Holds |
-|---|---|
-| Environment (`.env`, `.env.execution`) | Secrets, service locations, trading mode |
-| PostgreSQL (`config` schema) | Runtime settings changed from the UI |
-| Source defaults (`backend/src/config/defaults.ts`) | Safe fallbacks only |
-
-Every service validates its environment with Zod on startup and exits if it is invalid.
+|-------|-------|
+| `.env` | Shared non-secret config |
+| `.env.db` | Per-service database role passwords |
+| `.env.execution` / `.env.ai` / `.env.market` | API keys (only the consuming service gets them) |
+| `config.settings` | Runtime toggles such as `live_trading_enabled` |
 
 ### Trading modes
 
-`TRADING_ENABLED=false` and `TRADING_MODE=shadow` are the defaults. The execution worker only proceeds when trading is enabled and the mode is `paper` or `live`. Live mode also requires the database setting `config.settings.live_trading_enabled = true`.
+- `shadow` — execution is always blocked; safe for testing the pipeline.
+- `paper` — execution simulates fills through the stub broker.
+- `live` — requires `TRADING_ENABLED=true`, `TRADING_MODE=live`, and the database setting `live_trading_enabled = true`.
 
-## Networks
+## Development without Docker (LXC / bare metal)
 
-- `frontend-net`: Caddy, frontend, API, Grafana.
-- `backend-net` (internal): PostgreSQL, Redis, all backend services. No internet access.
-- `egress-net`: outbound internet for the market, AI and execution workers.
+Each service builds to `dist/` and can be run with Node directly.
 
-## Database migrations
+1. Install Postgres and create a `trading` database.
+2. Run migrations:
+   ```bash
+   npm install
+   npm run build --workspace=@trading/shared --workspace=@trading/db
+   DATABASE_URL=postgres://postgres:password@127.0.0.1:5432/trading \
+     DB_PASSWORD_MARKET=... DB_PASSWORD_FEATURES=... ... \
+     node packages/db/dist/migrate.js
+   ```
+3. Build all services:
+   ```bash
+   npm run build
+   ```
+4. Start each service as its own systemd unit with the env it needs. Example for the market service:
+   ```bash
+   DATABASE_URL=postgres://trading_market:password@127.0.0.1:5432/trading \
+   ALLOWED_CALLER_CIDRS=127.0.0.1,10.0.0.0/24 \
+   MANAGER_IP=10.0.0.10 \
+   node services/market/dist/index.js
+   ```
+
+Set `ALLOWED_CALLER_CIDRS` to the subnet that contains the manager/gateway instead of the Compose `backend-net` subnet.
+
+## Useful commands
 
 ```bash
-cd backend
-npm run db:generate   # after editing src/db/schema/*
-npm run db:migrate    # applied automatically by the migrate service in Compose
+npm run build        # build all packages and services
+npm run typecheck    # typecheck all workspaces
+npm run dev          # start the development Compose stack
+npm run down         # stop the stack
 ```
-
-## Running outside Docker (LXC)
-
-The code does not depend on container names; point the env at local services:
-
-```env
-DATABASE_URL=postgres://trading:password@127.0.0.1:5432/trading
-REDIS_URL=redis://127.0.0.1:6379
-```
-
-Build with `npm run build` and run each `dist/...` entry point as its own systemd unit.
